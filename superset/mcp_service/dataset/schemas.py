@@ -24,6 +24,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Any, Dict, List, Literal
 
+import humanize
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -35,6 +36,7 @@ from pydantic import (
 
 from superset.daos.base import ColumnOperator, ColumnOperatorEnum
 from superset.mcp_service.common.cache_schemas import MetadataCacheControl
+from superset.mcp_service.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from superset.mcp_service.system.schemas import (
     PaginationInfo,
     serialize_user_object,
@@ -247,7 +249,13 @@ class ListDatasetsRequest(MetadataCacheControl):
         Field(default=1, description="Page number for pagination (1-based)"),
     ]
     page_size: Annotated[
-        PositiveInt, Field(default=10, description="Number of items per page")
+        int,
+        Field(
+            default=DEFAULT_PAGE_SIZE,
+            gt=0,
+            le=MAX_PAGE_SIZE,
+            description=f"Number of items per page (max {MAX_PAGE_SIZE})",
+        ),
     ]
 
     @model_validator(mode="after")
@@ -300,6 +308,13 @@ def _parse_json_field(obj: Any, field_name: str) -> Dict[str, Any] | None:
     return value
 
 
+def _humanize_timestamp(dt: datetime | None) -> str | None:
+    """Convert a datetime to a humanized string like '2 hours ago'."""
+    if dt is None:
+        return None
+    return humanize.naturaltime(datetime.now() - dt)
+
+
 def serialize_dataset_object(dataset: Any) -> DatasetInfo | None:
     if not dataset:
         return None
@@ -342,11 +357,11 @@ def serialize_dataset_object(dataset: Any) -> DatasetInfo | None:
         changed_by=getattr(dataset, "changed_by_name", None)
         or (str(dataset.changed_by) if getattr(dataset, "changed_by", None) else None),
         changed_on=getattr(dataset, "changed_on", None),
-        changed_on_humanized=getattr(dataset, "changed_on_humanized", None),
+        changed_on_humanized=_humanize_timestamp(getattr(dataset, "changed_on", None)),
         created_by=getattr(dataset, "created_by_name", None)
         or (str(dataset.created_by) if getattr(dataset, "created_by", None) else None),
         created_on=getattr(dataset, "created_on", None),
-        created_on_humanized=getattr(dataset, "created_on_humanized", None),
+        created_on_humanized=_humanize_timestamp(getattr(dataset, "created_on", None)),
         tags=[
             TagInfo.model_validate(tag, from_attributes=True)
             for tag in getattr(dataset, "tags", [])
