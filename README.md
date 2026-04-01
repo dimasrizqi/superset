@@ -1,4 +1,22 @@
 <!--
+how to start superset
+nano ~/.bashrc
+export TAG=6.0.0 
+save nano
+git clone --depth=1  https://github.com/apache/superset.git
+cd superset
+echo $TAG
+git fetch --depth=1 origin tag $TAG
+git checkout $TAG
+git switch -c 6.0.0
+mv docker-compose* docker
+cp docker/docker-compose-non-dev.yml .
+
+
+
+-->
+
+<!--
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
 distributed with this work for additional information
